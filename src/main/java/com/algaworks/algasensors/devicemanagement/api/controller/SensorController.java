@@ -1,22 +1,25 @@
 package com.algaworks.algasensors.devicemanagement.api.controller;
 
 import com.algaworks.algasensors.devicemanagement.api.model.SensorInput;
-import com.algaworks.algasensors.devicemanagement.domain.model.repository.model.Sensor;
+import com.algaworks.algasensors.devicemanagement.domain.model.Sensor;
+import com.algaworks.algasensors.devicemanagement.domain.repository.SensorRepository;
 import io.hypersistence.tsid.TSID;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.UUID;
-
 @RestController
 @RequestMapping("/api/sensors")
+@RequiredArgsConstructor
 public class SensorController {
+
+    private final SensorRepository sensorRepository;
+
 
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
     public Sensor create(@RequestBody SensorInput input){
-
-        return Sensor.builder()
+        Sensor build = Sensor.builder()
                 .id(TSID.fast())
                 .name(input.getIp())
                 .ip(input.getIp())
@@ -26,6 +29,8 @@ public class SensorController {
                 .enabled(false)
                 .build();
 
+        return sensorRepository.saveAndFlush(build);
     }
+
 
 }

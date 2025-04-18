@@ -1,6 +1,7 @@
 package com.algaworks.algasensors.devicemanagement.api.controller;
 
 import com.algaworks.algasensors.devicemanagement.api.model.SensorInput;
+import com.algaworks.algasensors.devicemanagement.api.model.SensorOutput;
 import com.algaworks.algasensors.devicemanagement.domain.model.Sensor;
 import com.algaworks.algasensors.devicemanagement.domain.repository.SensorRepository;
 import io.hypersistence.tsid.TSID;
@@ -18,8 +19,8 @@ public class SensorController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public Sensor create(@RequestBody SensorInput input){
-        Sensor build = Sensor.builder()
+    public SensorOutput create(@RequestBody SensorInput input){
+        Sensor sensor = Sensor.builder()
                 .id(TSID.fast())
                 .name(input.getIp())
                 .ip(input.getIp())
@@ -29,7 +30,16 @@ public class SensorController {
                 .enabled(false)
                 .build();
 
-        return sensorRepository.saveAndFlush(build);
+         sensor = sensorRepository.saveAndFlush(sensor);
+        return SensorOutput.builder()
+                .id(TSID.fast())
+                .name(input.getIp())
+                .ip(input.getIp())
+                .location(input.getLocation())
+                .protocol(input.getProtocol())
+                .model(input.getModel())
+                .enabled(sensor.getEnabled())
+                .build();
     }
 
 

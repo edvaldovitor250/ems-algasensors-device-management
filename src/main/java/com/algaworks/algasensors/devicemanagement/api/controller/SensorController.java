@@ -15,9 +15,11 @@ public class SensorController {
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
     public Sensor create(@RequestBody SensorInput input){
+
         return Sensor.builder()
                 .id(TSID.fast())
                 .name(input.getIp())
+                .ip(input.getIp())
                 .location(input.getLocation())
                 .protocol(input.getProtocol())
                 .model(input.getModel())

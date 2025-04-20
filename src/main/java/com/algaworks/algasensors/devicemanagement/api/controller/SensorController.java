@@ -1,7 +1,9 @@
 package com.algaworks.algasensors.devicemanagement.api.controller;
 
+import com.algaworks.algasensors.devicemanagement.api.client.SensorMonitoringClient;
 import com.algaworks.algasensors.devicemanagement.api.model.SensorInput;
 import com.algaworks.algasensors.devicemanagement.api.model.SensorOutput;
+import com.algaworks.algasensors.devicemanagement.common.IdGenerator;
 import com.algaworks.algasensors.devicemanagement.domain.model.Sensor;
 import com.algaworks.algasensors.devicemanagement.domain.model.SensorId;
 import com.algaworks.algasensors.devicemanagement.domain.repository.SensorRepository;
@@ -20,19 +22,44 @@ import org.springframework.web.server.ResponseStatusException;
 public class SensorController {
 
     private final SensorRepository sensorRepository;
+    private final SensorMonitoringClient sensorMonitoringClient;
 
     @GetMapping
-    public Page<SensorOutput> search( @PageableDefault Pageable pagable){
-        Page<Sensor> sensors = sensorRepository.findAll(pagable);
+    public Page<SensorOutput> search(@PageableDefault Pageable pageable) {
+        Page<Sensor> sensors = sensorRepository.findAll(pageable);
         return sensors.map(this::convertToModel);
     }
 
+    @GetMapping("{sensorId}")
+    public SensorOutput getOne(@PathVariable TSID sensorId) {
+        Sensor sensor = sensorRepository.findById
+                        (new SensorId(sensorId).getValue())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
+        return convertToModel(sensor);
+    }
+
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public SensorOutput create(@RequestBody SensorInput input) {
+        Sensor sensor = Sensor.builder()
+                .id(new SensorId(IdGenerator.generateTSID()).getValue())
+                .name(input.getName())
+                .ip(input.getIp())
+                .location(input.getLocation())
+                .protocol(input.getProtocol())
+                .model(input.getModel())
+                .enabled(false)
+                .build();
+
+        sensor = sensorRepository.saveAndFlush(sensor);
+
+        return convertToModel(sensor);
+    }
+
     @PutMapping("/{sensorId}")
-    public SensorOutput updateSensor(
-            @PathVariable TSID sensorId,
-            @RequestBody SensorInput input
-    ) {
-        Sensor sensor = sensorRepository.findById(sensorId)
+    public SensorOutput update(@PathVariable TSID sensorId,
+                               @RequestBody SensorInput input) {
+        Sensor sensor = sensorRepository.findById(new SensorId(sensorId).getValue())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
 
         sensor.setName(input.getName());
@@ -41,10 +68,10 @@ public class SensorController {
         sensor.setModel(input.getModel());
         sensor.setProtocol(input.getProtocol());
 
-        Sensor updated = sensorRepository.save(sensor);
-        return convertToModel(updated);
-    }
+        sensor = sensorRepository.save(sensor);
 
+        return convertToModel(sensor);
+    }
 
     @DeleteMapping("/{sensorId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -52,6 +79,8 @@ public class SensorController {
         Sensor sensor = sensorRepository.findById(new SensorId(sensorId).getValue())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         sensorRepository.delete(sensor);
+
+        sensorMonitoringClient.disableMonitoring(sensorId);
     }
 
     @PutMapping("/{sensorId}/enable")
@@ -61,8 +90,9 @@ public class SensorController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         sensor.setEnabled(true);
         sensorRepository.save(sensor);
-    }
 
+        sensorMonitoringClient.enableMonitoring(sensorId);
+    }
 
     @DeleteMapping("/{sensorId}/enable")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -71,39 +101,14 @@ public class SensorController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         sensor.setEnabled(false);
         sensorRepository.save(sensor);
+
+        sensorMonitoringClient.disableMonitoring(sensorId);
     }
 
-
-
-    @GetMapping("{sensorId}")
-    public SensorOutput getOne(@PathVariable TSID sensorId){
-        Sensor sensor = sensorRepository.findById(sensorId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-
-        return convertToModel(sensor);
-    }
-
-    @PostMapping
-    @ResponseStatus(HttpStatus.ACCEPTED)
-    public SensorOutput create(@RequestBody SensorInput input){
-        Sensor sensor = Sensor.builder()
-                .id(TSID.fast())
-                .name(input.getIp())
-                .ip(input.getIp())
-                .location(input.getLocation())
-                .protocol(input.getProtocol())
-                .model(input.getModel())
-                .enabled(false)
-                .build();
-
-         sensor = sensorRepository.saveAndFlush(sensor);
-        return convertToModel( sensor);
-    }
-
-    private  SensorOutput convertToModel( Sensor sensor) {
+    private SensorOutput convertToModel(Sensor sensor) {
         return SensorOutput.builder()
                 .id(sensor.getId())
-                .name(sensor.getIp())
+                .name(sensor.getName())
                 .ip(sensor.getIp())
                 .location(sensor.getLocation())
                 .protocol(sensor.getProtocol())
@@ -111,6 +116,5 @@ public class SensorController {
                 .enabled(sensor.getEnabled())
                 .build();
     }
-
 
 }

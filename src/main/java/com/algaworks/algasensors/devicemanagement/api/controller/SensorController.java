@@ -32,8 +32,7 @@ public class SensorController {
 
     @GetMapping("{sensorId}")
     public SensorOutput getOne(@PathVariable TSID sensorId) {
-        Sensor sensor = sensorRepository.findById
-                        (new SensorId(sensorId).getValue())
+        Sensor sensor = sensorRepository.findById(new SensorId(sensorId).getValue())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
         return convertToModel(sensor);
     }

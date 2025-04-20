@@ -1,5 +1,6 @@
 package com.algaworks.algasensors.devicemanagement.api.client.impl;
 
+import com.algaworks.algasensors.devicemanagement.api.client.RestClientFactory;
 import com.algaworks.algasensors.devicemanagement.api.client.SensorMonitoringClient;
 import com.algaworks.algasensors.devicemanagement.api.client.SensorMonitoringClientBadGatewayException;
 import io.hypersistence.tsid.TSID;
@@ -16,23 +17,10 @@ public class SensorMonitoringClientImpl implements SensorMonitoringClient {
 
     private final RestClient restClient;
 
-    public SensorMonitoringClientImpl(RestClient.Builder builder) {
-        this.restClient = builder.baseUrl("http://localhost:8082")
-                .requestFactory(generateClientHttpRequestFactory())
-                .defaultStatusHandler(HttpStatusCode::isError,((request, response) ->
-                        {throw new SensorMonitoringClientBadGatewayException();
-                        }))
-                .build();
+    public SensorMonitoringClientImpl(RestClientFactory factory) {
+        this.restClient = factory.temperatureMonitoringRestClient();
     }
 
-    private ClientHttpRequestFactory generateClientHttpRequestFactory() {
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-
-        factory.setReadTimeout(Duration.ofSeconds(5));
-        factory.setConnectTimeout(Duration.ofSeconds(3));
-
-        return factory;
-    }
 
     @Override
     public void enableMonitoring(TSID sensorId) {
